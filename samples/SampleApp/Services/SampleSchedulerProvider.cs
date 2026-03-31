@@ -61,6 +61,37 @@ public class SampleSchedulerProvider : ISchedulerEventProvider
                 });
             }
 
+            // Tuesday overlapping events (3-way overlap at 2-3pm)
+            if (dow == DayOfWeek.Tuesday)
+            {
+                events.Add(new SchedulerEvent
+                {
+                    Title = "Project Alpha",
+                    Description = "Architecture review",
+                    Color = CategoryColors[4],
+                    Start = new DateTimeOffset(current.AddHours(13).AddMinutes(30)),
+                    End = new DateTimeOffset(current.AddHours(15))
+                });
+
+                events.Add(new SchedulerEvent
+                {
+                    Title = "Client Call",
+                    Description = "Q1 deliverables discussion",
+                    Color = CategoryColors[2],
+                    Start = new DateTimeOffset(current.AddHours(14)),
+                    End = new DateTimeOffset(current.AddHours(15).AddMinutes(30))
+                });
+
+                events.Add(new SchedulerEvent
+                {
+                    Title = "Code Review",
+                    Description = "PR #342 review",
+                    Color = CategoryColors[0],
+                    Start = new DateTimeOffset(current.AddHours(14).AddMinutes(30)),
+                    End = new DateTimeOffset(current.AddHours(16))
+                });
+            }
+
             // Wednesday design review
             if (dow == DayOfWeek.Wednesday)
             {
@@ -119,6 +150,74 @@ public class SampleSchedulerProvider : ISchedulerEventProvider
                     Color = CategoryColors[2],
                     Start = new DateTimeOffset(current),
                     End = new DateTimeOffset(current.AddDays(1))
+                });
+            }
+
+            // Multi-day conference (second week, Tue-Thu)
+            if (dow == DayOfWeek.Tuesday && current.Day is > 7 and <= 14)
+            {
+                events.Add(new SchedulerEvent
+                {
+                    Title = "Tech Conference",
+                    Description = "Annual developer conference",
+                    IsAllDay = true,
+                    Color = CategoryColors[5],
+                    Start = new DateTimeOffset(current),
+                    End = new DateTimeOffset(current.AddDays(3))
+                });
+            }
+
+            // Multi-day vacation (third week, Mon-Fri)
+            if (dow == DayOfWeek.Monday && current.Day is > 14 and <= 21)
+            {
+                events.Add(new SchedulerEvent
+                {
+                    Title = "Vacation",
+                    Description = "Beach trip",
+                    IsAllDay = true,
+                    Color = CategoryColors[1],
+                    Start = new DateTimeOffset(current),
+                    End = new DateTimeOffset(current.AddDays(5))
+                });
+            }
+
+            // All-day birthday on the 20th
+            if (current.Day == 20)
+            {
+                events.Add(new SchedulerEvent
+                {
+                    Title = "Sarah's Birthday",
+                    IsAllDay = true,
+                    Color = CategoryColors[3],
+                    Start = new DateTimeOffset(current),
+                    End = new DateTimeOffset(current.AddDays(1))
+                });
+            }
+
+            // Multi-day deadline spanning a weekend (last Thu-Mon)
+            if (dow == DayOfWeek.Thursday && current.Day > 24)
+            {
+                events.Add(new SchedulerEvent
+                {
+                    Title = "Release Deadline",
+                    Description = "Q1 release window",
+                    IsAllDay = true,
+                    Color = CategoryColors[2],
+                    Start = new DateTimeOffset(current),
+                    End = new DateTimeOffset(current.AddDays(4))
+                });
+            }
+
+            // Overnight event on Saturdays (8pm - 1am next day)
+            if (dow == DayOfWeek.Saturday)
+            {
+                events.Add(new SchedulerEvent
+                {
+                    Title = "Game Night",
+                    Description = "Board games at Dave's place",
+                    Color = CategoryColors[1],
+                    Start = new DateTimeOffset(current.AddHours(20)),
+                    End = new DateTimeOffset(current.AddDays(1).AddHours(1))
                 });
             }
 

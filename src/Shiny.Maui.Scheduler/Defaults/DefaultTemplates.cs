@@ -1,3 +1,5 @@
+using System.Globalization;
+
 namespace Shiny.Maui.Scheduler;
 
 public static class DefaultTemplates
@@ -68,17 +70,12 @@ public static class DefaultTemplates
 
     public static DataTemplate CreateCalendarListDayHeaderTemplate() => new(() =>
     {
-        var grid = new Grid
+        var accentBar = new BoxView
         {
-            ColumnDefinitions =
-            {
-                new ColumnDefinition(GridLength.Auto),
-                new ColumnDefinition(GridLength.Star)
-            },
-            Padding = new Thickness(12, 8),
-            BackgroundColor = Color.FromRgba(240, 240, 240, 255),
-            ColumnSpacing = 8
+            WidthRequest = 4,
+            Color = Colors.DodgerBlue
         };
+        accentBar.SetBinding(VisualElement.IsVisibleProperty, static (CalendarListDayGroup g) => g.IsToday);
 
         var dot = new BoxView
         {
@@ -90,16 +87,42 @@ public static class DefaultTemplates
         };
         dot.SetBinding(VisualElement.IsVisibleProperty, static (CalendarListDayGroup g) => g.IsToday);
 
-        var label = new Label
+        var dateLabel = new Label
         {
             FontAttributes = FontAttributes.Bold,
             FontSize = 14,
             VerticalOptions = LayoutOptions.Center
         };
-        label.SetBinding(Label.TextProperty, static (CalendarListDayGroup g) => g.DateDisplay);
+        dateLabel.SetBinding(Label.TextProperty, static (CalendarListDayGroup g) => g.DateDisplay);
 
-        grid.Add(dot, 0);
-        grid.Add(label, 1);
+        var countLabel = new Label
+        {
+            FontSize = 12,
+            TextColor = Colors.Gray,
+            VerticalOptions = LayoutOptions.Center,
+            HorizontalOptions = LayoutOptions.End
+        };
+        countLabel.SetBinding(Label.TextProperty, static (CalendarListDayGroup g) => g.EventCountDisplay);
+
+        var grid = new Grid
+        {
+            ColumnDefinitions =
+            {
+                new ColumnDefinition(GridLength.Auto),
+                new ColumnDefinition(GridLength.Auto),
+                new ColumnDefinition(GridLength.Star),
+                new ColumnDefinition(GridLength.Auto)
+            },
+            Padding = new Thickness(0, 0, 12, 0),
+            ColumnSpacing = 8,
+            BackgroundColor = Color.FromRgba(240, 240, 240, 255),
+            MinimumHeightRequest = 36
+        };
+
+        grid.Add(accentBar, 0);
+        grid.Add(dot, 1);
+        grid.Add(dateLabel, 2);
+        grid.Add(countLabel, 3);
 
         return grid;
     });
@@ -131,14 +154,47 @@ public static class DefaultTemplates
         };
         descLabel.SetBinding(Label.TextProperty, static (SchedulerEvent e) => e.Description);
 
-        var timeLabel = new Label
+        var startLabel = new Label
+        {
+            FontSize = 11,
+            TextColor = Colors.Gray
+        };
+        startLabel.SetBinding(Label.TextProperty, static (SchedulerEvent e) => e.Start, stringFormat: "{0:h:mm tt}");
+
+        var endLabel = new Label
+        {
+            FontSize = 11,
+            TextColor = Colors.Gray
+        };
+        endLabel.SetBinding(Label.TextProperty, static (SchedulerEvent e) => e.End, stringFormat: "{0:h:mm tt}");
+
+        var allDayLabel = new Label
         {
             FontSize = 11,
             TextColor = Colors.Gray,
-            HorizontalOptions = LayoutOptions.End,
-            VerticalOptions = LayoutOptions.Center
+            Text = "All Day"
         };
-        timeLabel.SetBinding(Label.TextProperty, static (SchedulerEvent e) => e.Start, stringFormat: "{0:h:mm tt}");
+        allDayLabel.SetBinding(VisualElement.IsVisibleProperty, static (SchedulerEvent e) => e.IsAllDay);
+
+        var timeRange = new HorizontalStackLayout
+        {
+            Spacing = 0,
+            Children =
+            {
+                startLabel,
+                new Label { Text = " – ", FontSize = 11, TextColor = Colors.Gray },
+                endLabel
+            }
+        };
+        timeRange.SetBinding(VisualElement.IsVisibleProperty, static (SchedulerEvent e) => e.IsAllDay,
+            converter: new InverseBoolConverter());
+
+        var timeStack = new VerticalStackLayout
+        {
+            HorizontalOptions = LayoutOptions.End,
+            VerticalOptions = LayoutOptions.Center,
+            Children = { timeRange, allDayLabel }
+        };
 
         var textStack = new VerticalStackLayout
         {
@@ -160,7 +216,7 @@ public static class DefaultTemplates
 
         grid.Add(colorBar, 0);
         grid.Add(textStack, 1);
-        grid.Add(timeLabel, 2);
+        grid.Add(timeStack, 2);
 
         var border = new Border
         {
@@ -174,4 +230,64 @@ public static class DefaultTemplates
 
         return border;
     });
+
+    public static DataTemplate CreateAppleCalendarDayPickerTemplate() => new(() =>
+    {
+        var dayName = new Label
+        {
+            FontSize = 10,
+            HorizontalTextAlignment = TextAlignment.Center
+        };
+        dayName.SetBinding(Label.TextProperty, static (DatePickerItemContext c) => c.DayName);
+
+        var dayNumber = new Label
+        {
+            FontSize = 17,
+            FontAttributes = FontAttributes.Bold,
+            HorizontalTextAlignment = TextAlignment.Center
+        };
+        dayNumber.SetBinding(Label.TextProperty, static (DatePickerItemContext c) => c.DayNumber);
+
+        var stack = new VerticalStackLayout
+        {
+            Spacing = 2,
+            HorizontalOptions = LayoutOptions.Center,
+            Children = { dayName, dayNumber }
+        };
+
+        var circle = new Border
+        {
+            Content = stack,
+            Padding = new Thickness(4, 6),
+            StrokeThickness = 0,
+            StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 22 },
+            WidthRequest = 48,
+            HeightRequest = 56,
+            BackgroundColor = Colors.Transparent
+        };
+
+        // Use property-changed handler to update colors based on context
+        circle.BindingContextChanged += (s, _) =>
+        {
+            if (s is not Border b || b.BindingContext is not DatePickerItemContext ctx) return;
+
+            var selected = ctx.IsSelected;
+            var today = ctx.IsToday;
+
+            b.BackgroundColor = selected ? Colors.DodgerBlue : Colors.Transparent;
+            dayName.TextColor = today && !selected ? Colors.DodgerBlue : selected ? Colors.White : Colors.Gray;
+            dayNumber.TextColor = today && !selected ? Colors.DodgerBlue : selected ? Colors.White : Colors.Black;
+        };
+
+        return circle;
+    });
+
+    sealed class InverseBoolConverter : IValueConverter
+    {
+        public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+            => value is bool b ? !b : value!;
+
+        public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+            => value is bool b ? !b : value!;
+    }
 }

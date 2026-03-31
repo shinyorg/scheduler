@@ -7,9 +7,11 @@ public class CalendarListDayGroup : List<SchedulerEvent>
         Date = date;
         DateDisplay = date.ToString("dddd, MMMM d, yyyy");
         IsToday = date == DateOnly.FromDateTime(DateTime.Today);
+        EventCountDisplay = Count == 1 ? "1 event" : $"{Count} events";
     }
 
     public DateOnly Date { get; }
     public string DateDisplay { get; }
     public bool IsToday { get; }
+    public string EventCountDisplay { get; }
 }

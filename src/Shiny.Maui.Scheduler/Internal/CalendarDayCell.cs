@@ -42,12 +42,14 @@ internal class CalendarDayCell : ContentView
                 new RowDefinition(new GridLength(28)),
                 new RowDefinition(GridLength.Star)
             },
-            Padding = new Thickness(1)
+            Padding = new Thickness(1),
+            IsClippedToBounds = true
         };
 
         _root.Add(_dateLabel, 0, 0);
         _root.Add(_eventsStack, 0, 1);
 
+        IsClippedToBounds = true;
         Content = _root;
     }
 

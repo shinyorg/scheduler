@@ -7,6 +7,8 @@ public class SchedulerCalendarView : ContentView
     readonly Grid _rootGrid;
     readonly Grid _headerGrid;
     readonly Label _monthLabel;
+    readonly Button _prevButton;
+    readonly Button _nextButton;
     readonly Grid _dayHeaderGrid;
     readonly Grid _calendarGrid;
     readonly ContentView _loaderOverlay;
@@ -64,6 +66,14 @@ public class SchedulerCalendarView : ContentView
     public static readonly BindableProperty FirstDayOfWeekProperty = BindableProperty.Create(
         nameof(FirstDayOfWeek), typeof(DayOfWeek), typeof(SchedulerCalendarView), DayOfWeek.Sunday,
         propertyChanged: (b, _, _) => ((SchedulerCalendarView)b).RebuildCalendar());
+
+    public static readonly BindableProperty MinDateProperty = BindableProperty.Create(
+        nameof(MinDate), typeof(DateOnly?), typeof(SchedulerCalendarView),
+        propertyChanged: (b, _, _) => ((SchedulerCalendarView)b).UpdateNavigationBounds());
+
+    public static readonly BindableProperty MaxDateProperty = BindableProperty.Create(
+        nameof(MaxDate), typeof(DateOnly?), typeof(SchedulerCalendarView),
+        propertyChanged: (b, _, _) => ((SchedulerCalendarView)b).UpdateNavigationBounds());
 
     public static readonly BindableProperty AllowPanProperty = BindableProperty.Create(
         nameof(AllowPan), typeof(bool), typeof(SchedulerCalendarView), true,
@@ -145,6 +155,18 @@ public class SchedulerCalendarView : ContentView
         set => SetValue(FirstDayOfWeekProperty, value);
     }
 
+    public DateOnly? MinDate
+    {
+        get => (DateOnly?)GetValue(MinDateProperty);
+        set => SetValue(MinDateProperty, value);
+    }
+
+    public DateOnly? MaxDate
+    {
+        get => (DateOnly?)GetValue(MaxDateProperty);
+        set => SetValue(MaxDateProperty, value);
+    }
+
     public bool AllowPan
     {
         get => (bool)GetValue(AllowPanProperty);
@@ -169,11 +191,31 @@ public class SchedulerCalendarView : ContentView
             VerticalTextAlignment = TextAlignment.Center
         };
 
-        var prevButton = new Button { Text = "◀", FontSize = 16, BackgroundColor = Colors.Transparent, WidthRequest = 44, BorderWidth = 0 };
-        prevButton.Clicked += (_, _) => NavigateMonth(-1);
+        _prevButton = new Button
+        {
+            Text = "<",
+            FontSize = 18,
+            FontAttributes = FontAttributes.Bold,
+            TextColor = Colors.DodgerBlue,
+            BackgroundColor = Colors.Transparent,
+            WidthRequest = 44,
+            BorderWidth = 0,
+            Padding = 0
+        };
+        _prevButton.Clicked += (_, _) => NavigateMonth(-1);
 
-        var nextButton = new Button { Text = "▶", FontSize = 16, BackgroundColor = Colors.Transparent, WidthRequest = 44, BorderWidth = 0 };
-        nextButton.Clicked += (_, _) => NavigateMonth(1);
+        _nextButton = new Button
+        {
+            Text = ">",
+            FontSize = 18,
+            FontAttributes = FontAttributes.Bold,
+            TextColor = Colors.DodgerBlue,
+            BackgroundColor = Colors.Transparent,
+            WidthRequest = 44,
+            BorderWidth = 0,
+            Padding = 0
+        };
+        _nextButton.Clicked += (_, _) => NavigateMonth(1);
 
         _headerGrid = new Grid
         {
@@ -185,9 +227,9 @@ public class SchedulerCalendarView : ContentView
             },
             HeightRequest = 44
         };
-        _headerGrid.Add(prevButton, 0);
+        _headerGrid.Add(_prevButton, 0);
         _headerGrid.Add(_monthLabel, 1);
-        _headerGrid.Add(nextButton, 2);
+        _headerGrid.Add(_nextButton, 2);
 
         _dayHeaderGrid = new Grid { HeightRequest = 30 };
         for (var i = 0; i < 7; i++)
@@ -284,13 +326,33 @@ public class SchedulerCalendarView : ContentView
 
     void NavigateMonth(int direction)
     {
-        var current = DisplayMonth;
-        DisplayMonth = current.AddMonths(direction);
+        var target = DisplayMonth.AddMonths(direction);
+        if (MinDate.HasValue && new DateOnly(target.Year, target.Month, DateTime.DaysInMonth(target.Year, target.Month)) < MinDate.Value)
+            return;
+        if (MaxDate.HasValue && new DateOnly(target.Year, target.Month, 1) > MaxDate.Value)
+            return;
+
+        DisplayMonth = target;
+    }
+
+    void UpdateNavigationBounds()
+    {
+        var dm = DisplayMonth;
+        _prevButton.IsEnabled = !MinDate.HasValue ||
+            new DateOnly(dm.Year, dm.Month, 1).AddMonths(-1).AddDays(DateTime.DaysInMonth(dm.AddMonths(-1).Year, dm.AddMonths(-1).Month) - 1) >= MinDate.Value;
+        _nextButton.IsEnabled = !MaxDate.HasValue ||
+            new DateOnly(dm.Year, dm.Month, 1).AddMonths(1) <= MaxDate.Value;
+        _prevButton.Opacity = _prevButton.IsEnabled ? 1.0 : 0.3;
+        _nextButton.Opacity = _nextButton.IsEnabled ? 1.0 : 0.3;
     }
 
     void OnProviderChanged() => LoadEvents();
     void OnSelectedDateChanged() => UpdateCellSelection();
-    void OnDisplayMonthChanged() => RebuildCalendar();
+    void OnDisplayMonthChanged()
+    {
+        RebuildCalendar();
+        UpdateNavigationBounds();
+    }
 
     void RebuildCalendar()
     {
@@ -425,6 +487,8 @@ public class SchedulerCalendarView : ContentView
 
     void OnDayTapped(DateOnly date)
     {
+        if (MinDate.HasValue && date < MinDate.Value) return;
+        if (MaxDate.HasValue && date > MaxDate.Value) return;
         if (Provider != null && !Provider.CanCalendarSelect(date))
             return;
 

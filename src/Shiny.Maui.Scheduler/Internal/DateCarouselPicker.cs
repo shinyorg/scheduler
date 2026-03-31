@@ -4,20 +4,22 @@ internal class DateCarouselPicker : ContentView
 {
     readonly HorizontalStackLayout _stack;
     readonly ScrollView _scroll;
+    readonly List<View> _items = [];
     DateOnly _selectedDate;
     int _daysToShow = 1;
-    readonly List<Button> _buttons = [];
+    DataTemplate? _itemTemplate;
+    bool _buildPending;
 
     public Action<DateOnly>? DateSelected { get; set; }
 
     public DateCarouselPicker()
     {
-        _stack = new HorizontalStackLayout { Spacing = 4, Padding = new Thickness(4) };
+        _stack = new HorizontalStackLayout { Spacing = 0, Padding = new Thickness(4) };
         _scroll = new ScrollView
         {
             Orientation = ScrollOrientation.Horizontal,
             Content = _stack,
-            HeightRequest = 50
+            HorizontalScrollBarVisibility = ScrollBarVisibility.Never
         };
         Content = _scroll;
     }
@@ -28,7 +30,7 @@ internal class DateCarouselPicker : ContentView
         set
         {
             _selectedDate = value;
-            Build();
+            QueueBuild();
         }
     }
 
@@ -38,42 +40,69 @@ internal class DateCarouselPicker : ContentView
         set
         {
             _daysToShow = value;
-            Build();
+            QueueBuild();
         }
+    }
+
+    public DataTemplate? ItemTemplate
+    {
+        get => _itemTemplate;
+        set
+        {
+            _itemTemplate = value;
+            QueueBuild();
+        }
+    }
+
+    void QueueBuild()
+    {
+        if (_buildPending) return;
+        _buildPending = true;
+        Dispatcher.Dispatch(() =>
+        {
+            _buildPending = false;
+            Build();
+        });
     }
 
     void Build()
     {
         _stack.Children.Clear();
-        _buttons.Clear();
+        _items.Clear();
 
+        var today = DateOnly.FromDateTime(DateTime.Today);
         var start = _selectedDate.AddDays(-14);
 
         for (var i = 0; i < 29; i++)
         {
             var date = start.AddDays(i);
             var isSelected = date == _selectedDate;
-            var btn = new Button
+            var isToday = date == today;
+
+            var template = _itemTemplate ?? DefaultTemplates.CreateAppleCalendarDayPickerTemplate();
+            var item = (View)template.CreateContent();
+            item.BindingContext = new DatePickerItemContext
             {
-                Text = $"{date:ddd}\n{date.Day}",
-                FontSize = 11,
-                WidthRequest = 50,
-                HeightRequest = 44,
-                Padding = new Thickness(2),
-                CornerRadius = 8,
-                BackgroundColor = isSelected ? Colors.DodgerBlue : Colors.Transparent,
-                TextColor = isSelected ? Colors.White : Colors.Black,
-                BorderWidth = 0
+                Date = date,
+                DayNumber = date.Day.ToString(),
+                DayName = date.ToString("ddd").ToUpperInvariant(),
+                MonthName = date.ToString("MMM").ToUpperInvariant(),
+                IsSelected = isSelected,
+                IsToday = isToday
             };
+
             var captured = date;
-            btn.Clicked += (_, _) =>
+            var tap = new TapGestureRecognizer();
+            tap.Tapped += (_, _) =>
             {
                 _selectedDate = captured;
                 DateSelected?.Invoke(captured);
                 UpdateSelection();
             };
-            _buttons.Add(btn);
-            _stack.Children.Add(btn);
+            item.GestureRecognizers.Add(tap);
+
+            _items.Add(item);
+            _stack.Children.Add(item);
         }
 
         ScrollToSelected();
@@ -81,13 +110,20 @@ internal class DateCarouselPicker : ContentView
 
     void UpdateSelection()
     {
+        var today = DateOnly.FromDateTime(DateTime.Today);
         var start = _selectedDate.AddDays(-14);
-        for (var i = 0; i < _buttons.Count; i++)
+        for (var i = 0; i < _items.Count; i++)
         {
             var date = start.AddDays(i);
             var isSelected = date == _selectedDate;
-            _buttons[i].BackgroundColor = isSelected ? Colors.DodgerBlue : Colors.Transparent;
-            _buttons[i].TextColor = isSelected ? Colors.White : Colors.Black;
+            var isToday = date == today;
+
+            if (_items[i].BindingContext is DatePickerItemContext ctx)
+            {
+                ctx.IsSelected = isSelected;
+                _items[i].BindingContext = null;
+                _items[i].BindingContext = ctx;
+            }
         }
     }
 
@@ -95,7 +131,7 @@ internal class DateCarouselPicker : ContentView
     {
         await Task.Delay(50);
         var selectedIdx = 14;
-        if (selectedIdx < _buttons.Count)
-            await _scroll.ScrollToAsync(_buttons[selectedIdx], ScrollToPosition.Center, false);
+        if (selectedIdx < _items.Count)
+            await _scroll.ScrollToAsync(_items[selectedIdx], ScrollToPosition.Center, false);
     }
 }

@@ -44,6 +44,11 @@ public class SchedulerAgendaView : ContentView
     public static readonly BindableProperty EventItemTemplateProperty = BindableProperty.Create(
         nameof(EventItemTemplate), typeof(DataTemplate), typeof(SchedulerAgendaView));
 
+    public static readonly BindableProperty DayPickerItemTemplateProperty = BindableProperty.Create(
+        nameof(DayPickerItemTemplate), typeof(DataTemplate), typeof(SchedulerAgendaView),
+        propertyChanged: (b, _, _) => ((SchedulerAgendaView)b)._datePicker.ItemTemplate =
+            ((SchedulerAgendaView)b).DayPickerItemTemplate);
+
     public static readonly BindableProperty LoaderTemplateProperty = BindableProperty.Create(
         nameof(LoaderTemplate), typeof(DataTemplate), typeof(SchedulerAgendaView));
 
@@ -60,6 +65,12 @@ public class SchedulerAgendaView : ContentView
     public static readonly BindableProperty TimeSlotHeightProperty = BindableProperty.Create(
         nameof(TimeSlotHeight), typeof(double), typeof(SchedulerAgendaView), 60.0,
         propertyChanged: (b, _, _) => ((SchedulerAgendaView)b).Rebuild());
+
+    public static readonly BindableProperty MinDateProperty = BindableProperty.Create(
+        nameof(MinDate), typeof(DateOnly?), typeof(SchedulerAgendaView));
+
+    public static readonly BindableProperty MaxDateProperty = BindableProperty.Create(
+        nameof(MaxDate), typeof(DateOnly?), typeof(SchedulerAgendaView));
 
     public static readonly BindableProperty AllowPanProperty = BindableProperty.Create(
         nameof(AllowPan), typeof(bool), typeof(SchedulerAgendaView), true,
@@ -106,6 +117,12 @@ public class SchedulerAgendaView : ContentView
         set => SetValue(EventItemTemplateProperty, value);
     }
 
+    public DataTemplate? DayPickerItemTemplate
+    {
+        get => (DataTemplate?)GetValue(DayPickerItemTemplateProperty);
+        set => SetValue(DayPickerItemTemplateProperty, value);
+    }
+
     public DataTemplate? LoaderTemplate
     {
         get => (DataTemplate?)GetValue(LoaderTemplateProperty);
@@ -136,6 +153,18 @@ public class SchedulerAgendaView : ContentView
         set => SetValue(TimeSlotHeightProperty, value);
     }
 
+    public DateOnly? MinDate
+    {
+        get => (DateOnly?)GetValue(MinDateProperty);
+        set => SetValue(MinDateProperty, value);
+    }
+
+    public DateOnly? MaxDate
+    {
+        get => (DateOnly?)GetValue(MaxDateProperty);
+        set => SetValue(MaxDateProperty, value);
+    }
+
     public bool AllowPan
     {
         get => (bool)GetValue(AllowPanProperty);
@@ -155,7 +184,12 @@ public class SchedulerAgendaView : ContentView
         _allDaySection = new AllDayEventsSection();
 
         _datePicker = new DateCarouselPicker();
-        _datePicker.DateSelected = date => SelectedDate = date;
+        _datePicker.DateSelected = date =>
+        {
+            if (MinDate.HasValue && date < MinDate.Value) return;
+            if (MaxDate.HasValue && date > MaxDate.Value) return;
+            SelectedDate = date;
+        };
 
         _timeIndicator = new CurrentTimeIndicator();
 

@@ -49,6 +49,12 @@ public class SchedulerCalendarListView : ContentView
     public static readonly BindableProperty DayHeaderTextColorProperty = BindableProperty.Create(
         nameof(DayHeaderTextColor), typeof(Color), typeof(SchedulerCalendarListView), Colors.Black);
 
+    public static readonly BindableProperty MinDateProperty = BindableProperty.Create(
+        nameof(MinDate), typeof(DateOnly?), typeof(SchedulerCalendarListView));
+
+    public static readonly BindableProperty MaxDateProperty = BindableProperty.Create(
+        nameof(MaxDate), typeof(DateOnly?), typeof(SchedulerCalendarListView));
+
     public static readonly BindableProperty AllowPanProperty = BindableProperty.Create(
         nameof(AllowPan), typeof(bool), typeof(SchedulerCalendarListView), true,
         propertyChanged: (b, _, n) => ((SchedulerCalendarListView)b)._collectionView.VerticalScrollBarVisibility =
@@ -110,6 +116,18 @@ public class SchedulerCalendarListView : ContentView
     {
         get => (Color)GetValue(DayHeaderTextColorProperty);
         set => SetValue(DayHeaderTextColorProperty, value);
+    }
+
+    public DateOnly? MinDate
+    {
+        get => (DateOnly?)GetValue(MinDateProperty);
+        set => SetValue(MinDateProperty, value);
+    }
+
+    public DateOnly? MaxDate
+    {
+        get => (DateOnly?)GetValue(MaxDateProperty);
+        set => SetValue(MaxDateProperty, value);
     }
 
     public bool AllowPan
@@ -223,6 +241,11 @@ public class SchedulerCalendarListView : ContentView
         _rangeStart = SelectedDate.AddDays(-halfPage);
         _rangeEnd = SelectedDate.AddDays(halfPage);
 
+        if (MinDate.HasValue && _rangeStart < MinDate.Value)
+            _rangeStart = MinDate.Value;
+        if (MaxDate.HasValue && _rangeEnd > MaxDate.Value)
+            _rangeEnd = MaxDate.Value;
+
         ShowLoader(true);
 
         try
@@ -246,11 +269,14 @@ public class SchedulerCalendarListView : ContentView
     async void OnRemainingItemsThresholdReached(object? sender, EventArgs e)
     {
         if (_isLoadingMore || Provider == null) return;
+        if (MaxDate.HasValue && _rangeEnd >= MaxDate.Value) return;
         _isLoadingMore = true;
 
         try
         {
             var newEnd = _rangeEnd.AddDays(DaysPerPage);
+            if (MaxDate.HasValue && newEnd > MaxDate.Value)
+                newEnd = MaxDate.Value;
             var groups = await LoadRange(_rangeEnd, newEnd, CancellationToken.None);
             _rangeEnd = newEnd;
 
@@ -268,12 +294,15 @@ public class SchedulerCalendarListView : ContentView
     {
         if (_isLoadingMore || Provider == null) return;
         if (e.FirstVisibleItemIndex > 3) return;
+        if (MinDate.HasValue && _rangeStart <= MinDate.Value) return;
 
         _isLoadingMore = true;
 
         try
         {
             var newStart = _rangeStart.AddDays(-DaysPerPage);
+            if (MinDate.HasValue && newStart < MinDate.Value)
+                newStart = MinDate.Value;
             var groups = await LoadRange(newStart, _rangeStart, CancellationToken.None);
             _rangeStart = newStart;
 
@@ -320,7 +349,8 @@ public class SchedulerCalendarListView : ContentView
                 .ThenBy(e => e.Start)
                 .ToList();
 
-            groups.Add(new CalendarListDayGroup(date, dayEvents));
+            if (dayEvents.Count > 0)
+                groups.Add(new CalendarListDayGroup(date, dayEvents));
         }
 
         return groups;

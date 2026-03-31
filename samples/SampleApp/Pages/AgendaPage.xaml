@@ -18,6 +18,7 @@
                 FontSize="12" />
 
         <scheduler:SchedulerAgendaView Grid.Row="1"
+            x:Name="AgendaView"
             Provider="{Binding Provider}"
             SelectedDate="{Binding SelectedDate}"
             DaysToShow="{Binding DaysToShow}"
