@@ -1,0 +1,8 @@
+{
+  "solution": {
+    "path": "Shiny.Maui.Scheduler.slnx",
+    "projects": [
+      "src/Shiny.Maui.Scheduler/Shiny.Maui.Scheduler.csproj"
+    ]
+  }
+}

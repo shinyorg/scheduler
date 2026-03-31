@@ -124,9 +124,11 @@ A day/multi-day timeline with hourly time slots, event positioning with overlap 
     DaysToShow="{Binding DaysToShow}"
     ShowCarouselDatePicker="True"
     ShowCurrentTimeMarker="True"
+    ShowAdditionalTimezones="{Binding ShowAdditionalTimezones}"
     CurrentTimeMarkerColor="Red"
     DefaultEventColor="CornflowerBlue"
-    TimeSlotHeight="60" />
+    TimeSlotHeight="60"
+    Use24HourTime="False" />
 ```
 
 | Property | Type | Default | Description |
@@ -138,25 +140,41 @@ A day/multi-day timeline with hourly time slots, event positioning with overlap 
 | DaysToShow | int | 1 | Number of day columns (1-7) |
 | ShowCarouselDatePicker | bool | true | Show horizontal date carousel |
 | ShowCurrentTimeMarker | bool | true | Show red line at current time |
+| Use24HourTime | bool | true | Use 24-hour format (HH:mm) or 12-hour (h:mm tt) |
 | EventItemTemplate | DataTemplate? | null | Custom template for events |
 | LoaderTemplate | DataTemplate? | null | Custom loading indicator |
 | DayPickerItemTemplate | DataTemplate? | null | Custom template for carousel date picker items |
 | CurrentTimeMarkerColor | Color | Red | Color of the time marker line |
 | TimezoneColor | Color | Gray | Color of time labels |
+| SeparatorColor | Color | Light gray | Color of hourly separator lines |
 | DefaultEventColor | Color | CornflowerBlue | Default event background color |
 | TimeSlotHeight | double | 60 | Height in pixels per hour slot |
 | AllowPan | bool | true | Enable scrolling the timeline |
 | AllowZoom | bool | true | Enable pinch-to-zoom (adjusts TimeSlotHeight) |
+| ShowAdditionalTimezones | bool | false | Toggle visibility of additional timezone columns |
+| AdditionalTimezones | IList\<TimeZoneInfo\> | empty | Additional timezones to display alongside local time |
 
 **Features:**
 - 1-day or multi-day column layout
+- Sticky per-day date headers above each day column
+- In multi-day view, time labels appear once on the left (not repeated per day)
 - Horizontal date carousel picker (Apple Calendar-style by default)
 - Custom day picker items via `DayPickerItemTemplate` using `DatePickerItemContext`
 - Overlapping events displayed side-by-side in columns
 - All-day events shown in a top section
-- Current time marker updates every minute
+- Current time marker with exact time display, updates every minute
+- 24-hour or 12-hour (AM/PM) time format via `Use24HourTime`
+- Multiple timezone columns with sticky timezone abbreviation headers
+- Timezone headers only show local tz label when additional timezones are visible
 - Tap time slots to create events
 - MinDate/MaxDate bounds enforcement
+
+**Multiple Timezones:**
+```csharp
+// Add timezones in code-behind or view setup
+AgendaView.AdditionalTimezones.Add(TimeZoneInfo.FindSystemTimeZoneById("America/New_York"));
+AgendaView.ShowAdditionalTimezones = true; // or bind to a ViewModel property
+```
 
 ---
 
