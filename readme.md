@@ -90,6 +90,8 @@ A monthly calendar grid with swipe navigation and event dots/summaries per day c
 | Provider | ISchedulerEventProvider? | null | Event data source |
 | SelectedDate | DateOnly | Today | Two-way bound selected date |
 | DisplayMonth | DateOnly | Today | Two-way bound display month |
+| MinDate | DateOnly? | null | Earliest navigable date |
+| MaxDate | DateOnly? | null | Latest navigable date |
 | ShowCalendarCellEventCountOnly | bool | false | Show count instead of event items |
 | EventItemTemplate | DataTemplate? | null | Custom template for event items in cells |
 | OverflowItemTemplate | DataTemplate? | null | Custom template for "+N more" overflow |
@@ -99,12 +101,15 @@ A monthly calendar grid with swipe navigation and event dots/summaries per day c
 | CalendarCellSelectedColor | Color | LightBlue | Background color of selected day |
 | CurrentDayColor | Color | DodgerBlue | Accent color for today |
 | FirstDayOfWeek | DayOfWeek | Sunday | First day of the week |
+| AllowPan | bool | true | Enable swipe navigation between months |
+| AllowZoom | bool | true | Enable pinch-to-zoom on calendar grid |
 
 **Features:**
-- Swipe left/right to navigate months
+- Month navigation arrows and swipe left/right
 - Tap a day cell to select it
 - Events grouped by date with overflow indicator
 - All-day events sort to top within each cell
+- MinDate/MaxDate bounds enforcement
 
 ---
 
@@ -128,23 +133,30 @@ A day/multi-day timeline with hourly time slots, event positioning with overlap 
 |----------|------|---------|-------------|
 | Provider | ISchedulerEventProvider? | null | Event data source |
 | SelectedDate | DateOnly | Today | Two-way bound selected date |
+| MinDate | DateOnly? | null | Earliest selectable date |
+| MaxDate | DateOnly? | null | Latest selectable date |
 | DaysToShow | int | 1 | Number of day columns (1-7) |
 | ShowCarouselDatePicker | bool | true | Show horizontal date carousel |
 | ShowCurrentTimeMarker | bool | true | Show red line at current time |
 | EventItemTemplate | DataTemplate? | null | Custom template for events |
 | LoaderTemplate | DataTemplate? | null | Custom loading indicator |
+| DayPickerItemTemplate | DataTemplate? | null | Custom template for carousel date picker items |
 | CurrentTimeMarkerColor | Color | Red | Color of the time marker line |
 | TimezoneColor | Color | Gray | Color of time labels |
 | DefaultEventColor | Color | CornflowerBlue | Default event background color |
 | TimeSlotHeight | double | 60 | Height in pixels per hour slot |
+| AllowPan | bool | true | Enable scrolling the timeline |
+| AllowZoom | bool | true | Enable pinch-to-zoom (adjusts TimeSlotHeight) |
 
 **Features:**
 - 1-day or multi-day column layout
-- Horizontal date carousel picker
-- Overlapping events displayed side-by-side
+- Horizontal date carousel picker (Apple Calendar-style by default)
+- Custom day picker items via `DayPickerItemTemplate` using `DatePickerItemContext`
+- Overlapping events displayed side-by-side in columns
 - All-day events shown in a top section
 - Current time marker updates every minute
 - Tap time slots to create events
+- MinDate/MaxDate bounds enforcement
 
 ---
 
@@ -164,6 +176,8 @@ A vertically scrolling event list grouped by day with infinite scroll in both di
 |----------|------|---------|-------------|
 | Provider | ISchedulerEventProvider? | null | Event data source |
 | SelectedDate | DateOnly | Today | Two-way bound; centers the list on this date |
+| MinDate | DateOnly? | null | Earliest loadable date (stops backward scroll) |
+| MaxDate | DateOnly? | null | Latest loadable date (stops forward scroll) |
 | EventItemTemplate | DataTemplate? | null | Custom template for event items |
 | DayHeaderTemplate | DataTemplate? | null | Custom template for day group headers |
 | LoaderTemplate | DataTemplate? | null | Custom loading indicator |
@@ -171,14 +185,18 @@ A vertically scrolling event list grouped by day with infinite scroll in both di
 | DefaultEventColor | Color | CornflowerBlue | Default color for event indicators |
 | DayHeaderBackgroundColor | Color | Transparent | Background color of day headers |
 | DayHeaderTextColor | Color | Black | Text color of day headers |
+| AllowPan | bool | true | Enable scroll gestures |
+| AllowZoom | bool | true | Enable pinch-to-zoom |
 
 **Features:**
 - Grouped by day with headers ("Monday, March 30, 2026")
-- Today indicator dot on current day header
-- Every day in the loaded range gets a group (including empty days)
+- Today indicator dot and event count on day headers
+- Empty days are skipped (only days with events are shown)
 - Multi-day events appear in each day they span
 - All-day events sort to top, then timed events by start time
+- Event items show start-end time range or "All Day"
 - Infinite scroll forward (RemainingItemsThreshold) and backward (Scrolled event)
+- MinDate/MaxDate bounds enforcement stops infinite scroll at boundaries
 - Initial load centers on SelectedDate
 - Tap an event to trigger `Provider.OnEventSelected()`
 
@@ -187,8 +205,9 @@ A vertically scrolling event list grouped by day with infinite scroll in both di
 public class CalendarListDayGroup : List<SchedulerEvent>
 {
     public DateOnly Date { get; }
-    public string DateDisplay { get; }  // "dddd, MMMM d, yyyy"
+    public string DateDisplay { get; }       // "dddd, MMMM d, yyyy"
     public bool IsToday { get; }
+    public string EventCountDisplay { get; } // "3 events"
 }
 ```
 
@@ -216,8 +235,25 @@ The `DefaultTemplates` static class provides these reusable templates:
 | `CreateEventItemTemplate()` | Calendar | Color bar + title label |
 | `CreateOverflowTemplate()` | Calendar | "+N more" overflow label |
 | `CreateLoaderTemplate()` | All views | ActivityIndicator + "Loading..." |
-| `CreateCalendarListDayHeaderTemplate()` | CalendarList | Today dot + bold date label |
-| `CreateCalendarListEventItemTemplate()` | CalendarList | Border card with color bar, title, description, time |
+| `CreateCalendarListDayHeaderTemplate()` | CalendarList | Accent bar + today dot + bold date + event count |
+| `CreateCalendarListEventItemTemplate()` | CalendarList | Border card with color bar, title, description, start-end time range |
+| `CreateAppleCalendarDayPickerTemplate()` | Agenda (default) | Apple Calendar-style day picker with circle selection |
+
+### DatePickerItemContext
+
+Used for custom `DayPickerItemTemplate` bindings in `SchedulerAgendaView`:
+
+```csharp
+public class DatePickerItemContext
+{
+    public DateOnly Date { get; set; }
+    public string DayNumber { get; set; }   // "30"
+    public string DayName { get; set; }     // "MON"
+    public string MonthName { get; set; }   // "MAR"
+    public bool IsSelected { get; set; }
+    public bool IsToday { get; set; }
+}
+```
 
 ---
 
@@ -250,6 +286,7 @@ src/Shiny.Maui.Scheduler/
         SchedulerEvent.cs               # Event data model
         CalendarOverflowContext.cs       # Overflow context for calendar cells
         CalendarListDayGroup.cs         # Day group for calendar list
+        DatePickerItemContext.cs        # Context for custom day picker templates
     Defaults/
         DefaultTemplates.cs             # Built-in DataTemplate factories
     Extensions/

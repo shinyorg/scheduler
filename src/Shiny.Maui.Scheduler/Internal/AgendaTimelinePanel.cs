@@ -10,6 +10,8 @@ internal class AgendaTimelinePanel : ContentView
     Color _timezoneColor = Colors.Gray;
     Color _defaultEventColor = Colors.CornflowerBlue;
     DataTemplate? _eventTemplate;
+    bool _use24HourTime = true;
+    Color _separatorColor = Color.FromRgba(220, 220, 220, 120);
 
     public Action<SchedulerEvent>? EventTapped { get; set; }
     public Action<DateTimeOffset>? TimeSlotTapped { get; set; }
@@ -54,6 +56,18 @@ internal class AgendaTimelinePanel : ContentView
         set { _eventTemplate = value; }
     }
 
+    public bool Use24HourTime
+    {
+        get => _use24HourTime;
+        set { _use24HourTime = value; }
+    }
+
+    public Color SeparatorColor
+    {
+        get => _separatorColor;
+        set { _separatorColor = value; }
+    }
+
     public void Build(DateOnly date, IReadOnlyList<SchedulerEvent> timedEvents, CurrentTimeIndicator? timeIndicator, bool showTimeMarker)
     {
         _timelineGrid.Children.Clear();
@@ -64,24 +78,28 @@ internal class AgendaTimelinePanel : ContentView
         for (var hour = 0; hour < 24; hour++)
             _timelineGrid.RowDefinitions.Add(new RowDefinition(new GridLength(_timeSlotHeight)));
 
-        // time labels
+        // time labels and separators
+        var timeFormat = _use24HourTime ? "HH:mm" : "h tt";
         for (var hour = 0; hour < 24; hour++)
         {
             var lbl = new Label
             {
-                Text = new TimeOnly(hour, 0).ToString("HH:mm"),
+                Text = new TimeOnly(hour, 0).ToString(timeFormat),
                 FontSize = 11,
                 TextColor = _timezoneColor,
-                VerticalTextAlignment = TextAlignment.Start,
+                VerticalTextAlignment = TextAlignment.Center,
                 HorizontalTextAlignment = TextAlignment.End,
-                Padding = new Thickness(0, 0, 8, 0)
+                Padding = new Thickness(0, 0, 8, 0),
+                Margin = new Thickness(0, -8, 0, 0),
+                VerticalOptions = LayoutOptions.Start,
+                HeightRequest = 16
             };
             _timelineGrid.Add(lbl, 0, hour);
 
             var separator = new BoxView
             {
-                Color = Color.FromRgba(200, 200, 200, 80),
-                HeightRequest = 1,
+                Color = _separatorColor,
+                HeightRequest = 0.5,
                 VerticalOptions = LayoutOptions.Start
             };
             _timelineGrid.Add(separator, 1, hour);
@@ -136,7 +154,9 @@ internal class AgendaTimelinePanel : ContentView
             var now = DateTime.Now.TimeOfDay.TotalMinutes;
             var markerY = now * _timeSlotHeight / 60.0;
 
-            AbsoluteLayout.SetLayoutBounds(timeIndicator, new Rect(0, markerY, 1, 2));
+            timeIndicator.UpdateTime(_use24HourTime);
+
+            AbsoluteLayout.SetLayoutBounds(timeIndicator, new Rect(0, markerY, 1, 16));
             AbsoluteLayout.SetLayoutFlags(timeIndicator, AbsoluteLayoutFlags.WidthProportional);
 
             if (!_eventsLayer.Children.Contains(timeIndicator))
@@ -190,7 +210,9 @@ internal class AgendaTimelinePanel : ContentView
                 },
                 new Label
                 {
-                    Text = $"{evt.Start.LocalDateTime:HH:mm} - {evt.End.LocalDateTime:HH:mm}",
+                    Text = _use24HourTime
+                        ? $"{evt.Start.LocalDateTime:HH:mm} - {evt.End.LocalDateTime:HH:mm}"
+                        : $"{evt.Start.LocalDateTime:h:mm tt} - {evt.End.LocalDateTime:h:mm tt}",
                     TextColor = Color.FromRgba(255, 255, 255, 200),
                     FontSize = 10
                 }

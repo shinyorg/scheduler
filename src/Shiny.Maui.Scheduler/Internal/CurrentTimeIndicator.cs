@@ -8,25 +8,23 @@ internal class CurrentTimeIndicator : ContentView
 
     public CurrentTimeIndicator()
     {
-        var grid = new Grid
-        {
-            ColumnDefinitions =
-            {
-                new ColumnDefinition(new GridLength(8)),
-                new ColumnDefinition(GridLength.Star)
-            },
-            HeightRequest = 2,
-            VerticalOptions = LayoutOptions.Start
-        };
-
         _dot = new BoxView
         {
             Color = Colors.Red,
             CornerRadius = 4,
             WidthRequest = 8,
             HeightRequest = 8,
+            VerticalOptions = LayoutOptions.Center
+        };
+
+        _timeLabel = new Label
+        {
+            FontSize = 9,
+            FontAttributes = FontAttributes.Bold,
+            TextColor = Colors.Red,
             VerticalOptions = LayoutOptions.Center,
-            Margin = new Thickness(0, -3, 0, 0)
+            VerticalTextAlignment = TextAlignment.Center,
+            Margin = new Thickness(2, 0, 0, 0)
         };
 
         _line = new BoxView
@@ -36,15 +34,20 @@ internal class CurrentTimeIndicator : ContentView
             VerticalOptions = LayoutOptions.Center
         };
 
-        _timeLabel = new Label
+        var grid = new Grid
         {
-            FontSize = 9,
-            TextColor = Colors.Red,
-            IsVisible = false
+            ColumnDefinitions =
+            {
+                new ColumnDefinition(GridLength.Auto),
+                new ColumnDefinition(GridLength.Auto),
+                new ColumnDefinition(GridLength.Star)
+            },
+            VerticalOptions = LayoutOptions.Start
         };
 
         grid.Add(_dot, 0);
-        grid.Add(_line, 1);
+        grid.Add(_timeLabel, 1);
+        grid.Add(_line, 2);
 
         Content = grid;
     }
@@ -57,5 +60,11 @@ internal class CurrentTimeIndicator : ContentView
             _dot.Color = value;
             _timeLabel.TextColor = value;
         }
+    }
+
+    public void UpdateTime(bool use24HourTime)
+    {
+        var now = DateTime.Now;
+        _timeLabel.Text = now.ToString(use24HourTime ? "HH:mm" : "h:mm tt");
     }
 }

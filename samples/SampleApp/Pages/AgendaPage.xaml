@@ -26,7 +26,8 @@
             ShowCurrentTimeMarker="True"
             CurrentTimeMarkerColor="Red"
             DefaultEventColor="CornflowerBlue"
-            TimeSlotHeight="60" />
+            TimeSlotHeight="60"
+            Use24HourTime="False" />
     </Grid>
 
 </ContentPage>

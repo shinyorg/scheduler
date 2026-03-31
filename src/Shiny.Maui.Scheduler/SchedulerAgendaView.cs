@@ -7,6 +7,7 @@ public class SchedulerAgendaView : ContentView
     readonly Grid _rootGrid;
     readonly AllDayEventsSection _allDaySection;
     readonly DateCarouselPicker _datePicker;
+    readonly Label _dateHeaderLabel;
     readonly ScrollView _scrollView;
     readonly Grid _columnsGrid;
     readonly ContentView _loaderOverlay;
@@ -80,6 +81,15 @@ public class SchedulerAgendaView : ContentView
     public static readonly BindableProperty AllowZoomProperty = BindableProperty.Create(
         nameof(AllowZoom), typeof(bool), typeof(SchedulerAgendaView), false,
         propertyChanged: (b, _, _) => ((SchedulerAgendaView)b).UpdateZoomGesture());
+
+    public static readonly BindableProperty Use24HourTimeProperty = BindableProperty.Create(
+        nameof(Use24HourTime), typeof(bool), typeof(SchedulerAgendaView), true,
+        propertyChanged: (b, _, _) => ((SchedulerAgendaView)b).Rebuild());
+
+    public static readonly BindableProperty SeparatorColorProperty = BindableProperty.Create(
+        nameof(SeparatorColor), typeof(Color), typeof(SchedulerAgendaView),
+        Color.FromRgba(220, 220, 220, 120),
+        propertyChanged: (b, _, _) => ((SchedulerAgendaView)b).Rebuild());
 
     public ISchedulerEventProvider? Provider
     {
@@ -177,6 +187,18 @@ public class SchedulerAgendaView : ContentView
         set => SetValue(AllowZoomProperty, value);
     }
 
+    public bool Use24HourTime
+    {
+        get => (bool)GetValue(Use24HourTimeProperty);
+        set => SetValue(Use24HourTimeProperty, value);
+    }
+
+    public Color SeparatorColor
+    {
+        get => (Color)GetValue(SeparatorColorProperty);
+        set => SetValue(SeparatorColorProperty, value);
+    }
+
     #endregion
 
     public SchedulerAgendaView()
@@ -192,6 +214,14 @@ public class SchedulerAgendaView : ContentView
         };
 
         _timeIndicator = new CurrentTimeIndicator();
+
+        _dateHeaderLabel = new Label
+        {
+            FontSize = 16,
+            FontAttributes = FontAttributes.Bold,
+            Padding = new Thickness(12, 8),
+            HorizontalTextAlignment = TextAlignment.Start
+        };
 
         _columnsGrid = new Grid();
         _scrollView = new ScrollView
@@ -212,6 +242,7 @@ public class SchedulerAgendaView : ContentView
             {
                 new RowDefinition(GridLength.Auto),
                 new RowDefinition(GridLength.Auto),
+                new RowDefinition(GridLength.Auto),
                 new RowDefinition(GridLength.Star)
             },
             RowSpacing = 0
@@ -219,11 +250,12 @@ public class SchedulerAgendaView : ContentView
 
         _rootGrid.Add(_allDaySection, 0, 0);
         _rootGrid.Add(_datePicker, 0, 1);
+        _rootGrid.Add(_dateHeaderLabel, 0, 2);
 
         var contentGrid = new Grid();
         contentGrid.Add(_scrollView);
         contentGrid.Add(_loaderOverlay);
-        _rootGrid.Add(contentGrid, 0, 2);
+        _rootGrid.Add(contentGrid, 0, 3);
 
         HorizontalOptions = LayoutOptions.Fill;
         VerticalOptions = LayoutOptions.Fill;
@@ -299,8 +331,15 @@ public class SchedulerAgendaView : ContentView
     {
         _datePicker.SelectedDate = SelectedDate;
         _datePicker.DaysToShow = DaysToShow;
+        UpdateDateHeader();
         BuildColumns();
         LoadEvents();
+    }
+
+    void UpdateDateHeader()
+    {
+        var date = SelectedDate.ToDateTime(TimeOnly.MinValue);
+        _dateHeaderLabel.Text = date.ToString("dddd, MMMM d, yyyy");
     }
 
     void BuildColumns()
@@ -317,6 +356,8 @@ public class SchedulerAgendaView : ContentView
                 TimeSlotHeight = TimeSlotHeight,
                 TimezoneColor = TimezoneColor,
                 DefaultEventColor = DefaultEventColor,
+                Use24HourTime = Use24HourTime,
+                SeparatorColor = SeparatorColor,
                 EventTemplate = EventItemTemplate,
                 EventTapped = OnEventTapped,
                 TimeSlotTapped = OnTimeSlotTapped
