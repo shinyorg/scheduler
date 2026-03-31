@@ -7,7 +7,7 @@ public class SchedulerAgendaView : ContentView
     readonly Grid _rootGrid;
     readonly AllDayEventsSection _allDaySection;
     readonly DateCarouselPicker _datePicker;
-    readonly Label _dateHeaderLabel;
+    readonly Grid _dayHeadersGrid;
     readonly ScrollView _scrollView;
     readonly Grid _columnsGrid;
     readonly ContentView _loaderOverlay;
@@ -89,6 +89,10 @@ public class SchedulerAgendaView : ContentView
     public static readonly BindableProperty SeparatorColorProperty = BindableProperty.Create(
         nameof(SeparatorColor), typeof(Color), typeof(SchedulerAgendaView),
         Color.FromRgba(220, 220, 220, 120),
+        propertyChanged: (b, _, _) => ((SchedulerAgendaView)b).Rebuild());
+
+    public static readonly BindableProperty ShowAdditionalTimezonesProperty = BindableProperty.Create(
+        nameof(ShowAdditionalTimezones), typeof(bool), typeof(SchedulerAgendaView), false,
         propertyChanged: (b, _, _) => ((SchedulerAgendaView)b).Rebuild());
 
     public ISchedulerEventProvider? Provider
@@ -199,6 +203,14 @@ public class SchedulerAgendaView : ContentView
         set => SetValue(SeparatorColorProperty, value);
     }
 
+    public bool ShowAdditionalTimezones
+    {
+        get => (bool)GetValue(ShowAdditionalTimezonesProperty);
+        set => SetValue(ShowAdditionalTimezonesProperty, value);
+    }
+
+    public IList<TimeZoneInfo> AdditionalTimezones { get; } = new List<TimeZoneInfo>();
+
     #endregion
 
     public SchedulerAgendaView()
@@ -214,16 +226,9 @@ public class SchedulerAgendaView : ContentView
         };
 
         _timeIndicator = new CurrentTimeIndicator();
+        _dayHeadersGrid = new Grid();
 
-        _dateHeaderLabel = new Label
-        {
-            FontSize = 16,
-            FontAttributes = FontAttributes.Bold,
-            Padding = new Thickness(12, 8),
-            HorizontalTextAlignment = TextAlignment.Start
-        };
-
-        _columnsGrid = new Grid();
+        _columnsGrid = new Grid { Padding = new Thickness(0, 10, 0, 10) };
         _scrollView = new ScrollView
         {
             Content = _columnsGrid,
@@ -250,7 +255,7 @@ public class SchedulerAgendaView : ContentView
 
         _rootGrid.Add(_allDaySection, 0, 0);
         _rootGrid.Add(_datePicker, 0, 1);
-        _rootGrid.Add(_dateHeaderLabel, 0, 2);
+        _rootGrid.Add(_dayHeadersGrid, 0, 2);
 
         var contentGrid = new Grid();
         contentGrid.Add(_scrollView);
@@ -331,26 +336,143 @@ public class SchedulerAgendaView : ContentView
     {
         _datePicker.SelectedDate = SelectedDate;
         _datePicker.DaysToShow = DaysToShow;
-        UpdateDateHeader();
+        BuildDayHeaders();
         BuildColumns();
         LoadEvents();
     }
 
-    void UpdateDateHeader()
+    int _timeColumnCount;
+
+    void BuildDayHeaders()
     {
-        var date = SelectedDate.ToDateTime(TimeOnly.MinValue);
-        _dateHeaderLabel.Text = date.ToString("dddd, MMMM d, yyyy");
+        _dayHeadersGrid.Children.Clear();
+        _dayHeadersGrid.ColumnDefinitions.Clear();
+
+        var showTz = ShowAdditionalTimezones && AdditionalTimezones.Count > 0;
+        var localTz = TimeZoneInfo.Local;
+        var localAbbr = GetTimezoneAbbreviation(localTz);
+
+        // Local tz header — only show label when additional timezones are visible
+        _dayHeadersGrid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(56)));
+        if (showTz)
+        {
+            _dayHeadersGrid.Add(new Label
+            {
+                Text = localAbbr,
+                FontSize = 10,
+                FontAttributes = FontAttributes.Bold,
+                TextColor = Colors.Gray,
+                HorizontalTextAlignment = TextAlignment.Center,
+                VerticalTextAlignment = TextAlignment.Center,
+                Padding = new Thickness(0, 4)
+            }, 0);
+
+            // Additional tz headers
+            for (var t = 0; t < AdditionalTimezones.Count; t++)
+            {
+                _dayHeadersGrid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(56)));
+                var tz = AdditionalTimezones[t];
+                var abbr = GetTimezoneAbbreviation(tz);
+                _dayHeadersGrid.Add(new Label
+                {
+                    Text = abbr,
+                    FontSize = 10,
+                    FontAttributes = FontAttributes.Bold,
+                    TextColor = Colors.SlateGray,
+                    HorizontalTextAlignment = TextAlignment.Center,
+                    VerticalTextAlignment = TextAlignment.Center,
+                    Padding = new Thickness(0, 4)
+                }, 1 + t);
+            }
+        }
+
+        _timeColumnCount = 1 + (showTz ? AdditionalTimezones.Count : 0);
+
+        // Day headers
+        for (var i = 0; i < DaysToShow; i++)
+        {
+            _dayHeadersGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
+            var date = SelectedDate.AddDays(i).ToDateTime(TimeOnly.MinValue);
+
+            var headerLabel = new Label
+            {
+                Text = date.ToString("dddd, MMMM d, yyyy"),
+                FontSize = DaysToShow > 1 ? 12 : 16,
+                FontAttributes = FontAttributes.Bold,
+                Padding = new Thickness(8, 8),
+                HorizontalTextAlignment = DaysToShow > 1 ? TextAlignment.Center : TextAlignment.Start,
+                LineBreakMode = LineBreakMode.TailTruncation,
+                MaxLines = 1
+            };
+
+            _dayHeadersGrid.Add(headerLabel, _timeColumnCount + i);
+        }
     }
 
     void BuildColumns()
     {
         _columnsGrid.Children.Clear();
         _columnsGrid.ColumnDefinitions.Clear();
+        _columnsGrid.RowDefinitions.Clear();
         _panels.Clear();
 
+        var showTz = ShowAdditionalTimezones && AdditionalTimezones.Count > 0;
+        var extraTzs = showTz ? AdditionalTimezones.ToList() : [];
+        var localTz = TimeZoneInfo.Local;
+        var timeFormat = Use24HourTime ? "HH:mm" : "h tt";
+
+        // Match column structure: [local time] [extra tz...] [day panels...]
+        _columnsGrid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(56)));
+        foreach (var _ in extraTzs)
+            _columnsGrid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(56)));
+        for (var i = 0; i < DaysToShow; i++)
+            _columnsGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
+
+        // 24 hour rows
+        for (var hour = 0; hour < 24; hour++)
+            _columnsGrid.RowDefinitions.Add(new RowDefinition(new GridLength(TimeSlotHeight)));
+
+        // Time labels
+        var baseDate = SelectedDate.ToDateTime(TimeOnly.MinValue);
+        for (var hour = 0; hour < 24; hour++)
+        {
+            var lbl = new Label
+            {
+                Text = new TimeOnly(hour, 0).ToString(timeFormat),
+                FontSize = 11,
+                TextColor = TimezoneColor,
+                VerticalTextAlignment = TextAlignment.Center,
+                HorizontalTextAlignment = TextAlignment.End,
+                Padding = new Thickness(0, 0, 8, 0),
+                Margin = new Thickness(0, -8, 0, 0),
+                VerticalOptions = LayoutOptions.Start,
+                HeightRequest = 16
+            };
+            _columnsGrid.Add(lbl, 0, hour);
+
+            for (var t = 0; t < extraTzs.Count; t++)
+            {
+                var localDt = new DateTime(baseDate.Year, baseDate.Month, baseDate.Day, hour, 0, 0, DateTimeKind.Local);
+                var converted = TimeZoneInfo.ConvertTime(localDt, localTz, extraTzs[t]);
+                var tzLbl = new Label
+                {
+                    Text = converted.ToString(timeFormat),
+                    FontSize = 10,
+                    TextColor = Colors.SlateGray,
+                    VerticalTextAlignment = TextAlignment.Center,
+                    HorizontalTextAlignment = TextAlignment.End,
+                    Padding = new Thickness(0, 0, 8, 0),
+                    Margin = new Thickness(0, -8, 0, 0),
+                    VerticalOptions = LayoutOptions.Start,
+                    HeightRequest = 16
+                };
+                _columnsGrid.Add(tzLbl, 1 + t, hour);
+            }
+        }
+
+        // Day panels (events only)
         for (var i = 0; i < DaysToShow; i++)
         {
-            _columnsGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
             var panel = new AgendaTimelinePanel
             {
                 TimeSlotHeight = TimeSlotHeight,
@@ -358,13 +480,33 @@ public class SchedulerAgendaView : ContentView
                 DefaultEventColor = DefaultEventColor,
                 Use24HourTime = Use24HourTime,
                 SeparatorColor = SeparatorColor,
+                ShowTimeLabels = false,
                 EventTemplate = EventItemTemplate,
                 EventTapped = OnEventTapped,
                 TimeSlotTapped = OnTimeSlotTapped
             };
             _panels.Add(panel);
-            _columnsGrid.Add(panel, i);
+            var col = _timeColumnCount + i;
+            _columnsGrid.Add(panel, col);
+            Grid.SetRowSpan(panel, 24);
         }
+    }
+
+    static string GetTimezoneAbbreviation(TimeZoneInfo tz)
+    {
+        var offset = tz.BaseUtcOffset;
+        var sign = offset >= TimeSpan.Zero ? "+" : "-";
+        var abs = offset.Duration();
+        var offsetStr = abs.Minutes == 0
+            ? $"UTC{sign}{abs.Hours}"
+            : $"UTC{sign}{abs.Hours}:{abs.Minutes:D2}";
+
+        // Try to get a short abbreviation from the ID
+        var id = tz.Id;
+        if (id.Contains('/'))
+            id = id[(id.LastIndexOf('/') + 1)..].Replace("_", " ");
+
+        return id.Length <= 10 ? $"{id}\n{offsetStr}" : offsetStr;
     }
 
     async void LoadEvents()

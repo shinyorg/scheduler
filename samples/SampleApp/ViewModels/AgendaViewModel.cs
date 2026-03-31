@@ -9,6 +9,7 @@ public class AgendaViewModel : INotifyPropertyChanged
 {
     DateOnly _selectedDate = DateOnly.FromDateTime(DateTime.Today);
     int _daysToShow = 1;
+    bool _showAdditionalTimezones;
 
     public AgendaViewModel(ISchedulerEventProvider provider)
     {
@@ -16,6 +17,10 @@ public class AgendaViewModel : INotifyPropertyChanged
         ToggleDaysCommand = new Command(() =>
         {
             DaysToShow = DaysToShow == 1 ? 3 : 1;
+        });
+        ToggleTimezonesCommand = new Command(() =>
+        {
+            ShowAdditionalTimezones = !ShowAdditionalTimezones;
         });
     }
 
@@ -33,9 +38,17 @@ public class AgendaViewModel : INotifyPropertyChanged
         set { _daysToShow = value; OnPropertyChanged(); OnPropertyChanged(nameof(DaysToggleText)); }
     }
 
+    public bool ShowAdditionalTimezones
+    {
+        get => _showAdditionalTimezones;
+        set { _showAdditionalTimezones = value; OnPropertyChanged(); OnPropertyChanged(nameof(TimezoneToggleText)); }
+    }
+
     public string DaysToggleText => DaysToShow == 1 ? "3-Day" : "1-Day";
+    public string TimezoneToggleText => ShowAdditionalTimezones ? "Hide TZ" : "Show TZ";
 
     public ICommand ToggleDaysCommand { get; }
+    public ICommand ToggleTimezonesCommand { get; }
 
     public event PropertyChangedEventHandler? PropertyChanged;
     void OnPropertyChanged([CallerMemberName] string? name = null) =>

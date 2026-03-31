@@ -12,23 +12,16 @@ internal class AgendaTimelinePanel : ContentView
     DataTemplate? _eventTemplate;
     bool _use24HourTime = true;
     Color _separatorColor = Color.FromRgba(220, 220, 220, 120);
+    IReadOnlyList<TimeZoneInfo>? _additionalTimezones;
+    bool _showTimeLabels = true;
 
     public Action<SchedulerEvent>? EventTapped { get; set; }
     public Action<DateTimeOffset>? TimeSlotTapped { get; set; }
 
     public AgendaTimelinePanel()
     {
-        _timelineGrid = new Grid
-        {
-            ColumnDefinitions =
-            {
-                new ColumnDefinition(new GridLength(56)),
-                new ColumnDefinition(GridLength.Star)
-            }
-        };
-
+        _timelineGrid = new Grid();
         _eventsLayer = new AbsoluteLayout();
-
         Content = _timelineGrid;
     }
 
@@ -68,33 +61,85 @@ internal class AgendaTimelinePanel : ContentView
         set { _separatorColor = value; }
     }
 
+    public IReadOnlyList<TimeZoneInfo>? AdditionalTimezones
+    {
+        get => _additionalTimezones;
+        set { _additionalTimezones = value; }
+    }
+
+    public bool ShowTimeLabels
+    {
+        get => _showTimeLabels;
+        set { _showTimeLabels = value; }
+    }
+
     public void Build(DateOnly date, IReadOnlyList<SchedulerEvent> timedEvents, CurrentTimeIndicator? timeIndicator, bool showTimeMarker)
     {
         _timelineGrid.Children.Clear();
         _timelineGrid.RowDefinitions.Clear();
+        _timelineGrid.ColumnDefinitions.Clear();
 
         var totalHeight = 24 * _timeSlotHeight;
+        var extraTzs = _showTimeLabels ? (_additionalTimezones ?? []) : [];
+        var localTz = TimeZoneInfo.Local;
+
+        // Column layout: [local time?] [extra tz?] ... [events]
+        var eventsColumnIndex = 0;
+        if (_showTimeLabels)
+        {
+            _timelineGrid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(56)));
+            foreach (var _ in extraTzs)
+                _timelineGrid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(56)));
+            eventsColumnIndex = 1 + extraTzs.Count;
+        }
+        _timelineGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
 
         for (var hour = 0; hour < 24; hour++)
             _timelineGrid.RowDefinitions.Add(new RowDefinition(new GridLength(_timeSlotHeight)));
 
-        // time labels and separators
         var timeFormat = _use24HourTime ? "HH:mm" : "h tt";
+        var localDate = date.ToDateTime(TimeOnly.MinValue);
+
         for (var hour = 0; hour < 24; hour++)
         {
-            var lbl = new Label
+            if (_showTimeLabels)
             {
-                Text = new TimeOnly(hour, 0).ToString(timeFormat),
-                FontSize = 11,
-                TextColor = _timezoneColor,
-                VerticalTextAlignment = TextAlignment.Center,
-                HorizontalTextAlignment = TextAlignment.End,
-                Padding = new Thickness(0, 0, 8, 0),
-                Margin = new Thickness(0, -8, 0, 0),
-                VerticalOptions = LayoutOptions.Start,
-                HeightRequest = 16
-            };
-            _timelineGrid.Add(lbl, 0, hour);
+                // local timezone label
+                var lbl = new Label
+                {
+                    Text = new TimeOnly(hour, 0).ToString(timeFormat),
+                    FontSize = 11,
+                    TextColor = _timezoneColor,
+                    VerticalTextAlignment = TextAlignment.Center,
+                    HorizontalTextAlignment = TextAlignment.End,
+                    Padding = new Thickness(0, 0, 8, 0),
+                    Margin = new Thickness(0, -8, 0, 0),
+                    VerticalOptions = LayoutOptions.Start,
+                    HeightRequest = 16
+                };
+                _timelineGrid.Add(lbl, 0, hour);
+
+                // additional timezone labels
+                for (var t = 0; t < extraTzs.Count; t++)
+                {
+                    var localDt = new DateTime(localDate.Year, localDate.Month, localDate.Day, hour, 0, 0, DateTimeKind.Local);
+                    var converted = TimeZoneInfo.ConvertTime(localDt, localTz, extraTzs[t]);
+
+                    var tzLbl = new Label
+                    {
+                        Text = converted.ToString(timeFormat),
+                        FontSize = 10,
+                        TextColor = Colors.SlateGray,
+                        VerticalTextAlignment = TextAlignment.Center,
+                        HorizontalTextAlignment = TextAlignment.End,
+                        Padding = new Thickness(0, 0, 8, 0),
+                        Margin = new Thickness(0, -8, 0, 0),
+                        VerticalOptions = LayoutOptions.Start,
+                        HeightRequest = 16
+                    };
+                    _timelineGrid.Add(tzLbl, 1 + t, hour);
+                }
+            }
 
             var separator = new BoxView
             {
@@ -102,10 +147,10 @@ internal class AgendaTimelinePanel : ContentView
                 HeightRequest = 0.5,
                 VerticalOptions = LayoutOptions.Start
             };
-            _timelineGrid.Add(separator, 1, hour);
+            _timelineGrid.Add(separator, eventsColumnIndex, hour);
         }
 
-        // events overlay in column 1
+        // events overlay in the events column
         _eventsLayer.Children.Clear();
         _eventsLayer.HeightRequest = totalHeight;
 
@@ -180,7 +225,7 @@ internal class AgendaTimelinePanel : ContentView
         };
         _eventsLayer.GestureRecognizers.Add(bgTap);
 
-        _timelineGrid.Add(_eventsLayer, 1);
+        _timelineGrid.Add(_eventsLayer, eventsColumnIndex);
         Grid.SetRowSpan(_eventsLayer, 24);
     }
 

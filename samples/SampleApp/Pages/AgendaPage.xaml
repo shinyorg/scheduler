@@ -8,20 +8,27 @@
              Title="Agenda">
 
     <Grid RowDefinitions="Auto,*">
-        <Button Text="{Binding DaysToggleText}"
-                Command="{Binding ToggleDaysCommand}"
-                HorizontalOptions="End"
-                Margin="8"
-                BackgroundColor="DodgerBlue"
-                TextColor="White"
-                CornerRadius="8"
-                FontSize="12" />
+        <HorizontalStackLayout HorizontalOptions="End" Spacing="8" Margin="8">
+            <Button Text="{Binding TimezoneToggleText}"
+                    Command="{Binding ToggleTimezonesCommand}"
+                    BackgroundColor="SlateGray"
+                    TextColor="White"
+                    CornerRadius="8"
+                    FontSize="12" />
+            <Button Text="{Binding DaysToggleText}"
+                    Command="{Binding ToggleDaysCommand}"
+                    BackgroundColor="DodgerBlue"
+                    TextColor="White"
+                    CornerRadius="8"
+                    FontSize="12" />
+        </HorizontalStackLayout>
 
         <scheduler:SchedulerAgendaView Grid.Row="1"
             x:Name="AgendaView"
             Provider="{Binding Provider}"
             SelectedDate="{Binding SelectedDate}"
             DaysToShow="{Binding DaysToShow}"
+            ShowAdditionalTimezones="{Binding ShowAdditionalTimezones}"
             ShowCarouselDatePicker="True"
             ShowCurrentTimeMarker="True"
             CurrentTimeMarkerColor="Red"
