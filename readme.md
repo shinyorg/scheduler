@@ -2,6 +2,12 @@
 
 A .NET MAUI scheduling and calendar component library providing three views: a monthly calendar, an agenda timeline, and a vertically scrolling event list. All views are AOT-safe, fully programmatic (no XAML required), and share a single `ISchedulerEventProvider` interface for data.
 
+## Screenshots
+
+| Calendar | Agenda | Event List |
+|:--------:|:------:|:----------:|
+| <img src="s1.png" width="200"/> | <img src="s2.png" width="200"/> | <img src="s3.png" width="200"/> |
+
 **NuGet**: `Shiny.Maui.Scheduler`
 **Namespace**: `Shiny.Maui.Scheduler`
 **Targets**: net10.0-android, net10.0-ios, net10.0-maccatalyst, net10.0-windows

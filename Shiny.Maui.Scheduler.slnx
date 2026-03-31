@@ -6,9 +6,8 @@
     <File Path="Directory.packages.props" />
     <File Path="readme.md" />
     <File Path="skills\shiny-maui-scheduler\SKILL.md" />
-    <File Path="src\Directory.build.props" />
-    <File Path="src\Directory.build.targets" />
-    <File Path="src\nuget.txt" />
+    <File Path="Directory.build.props" />
+    <File Path="nuget.txt" />
     <File Path="version.json" />
   </Folder>
   <Project Path="samples/SampleApp/SampleApp.csproj" />
