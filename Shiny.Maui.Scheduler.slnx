@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="samples/SampleApp/SampleApp.csproj" />
+  <Project Path="src/Shiny.Maui.Scheduler/Shiny.Maui.Scheduler.csproj" />
+</Solution>

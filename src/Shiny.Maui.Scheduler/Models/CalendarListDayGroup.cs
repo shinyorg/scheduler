@@ -1,0 +1,15 @@
+namespace Shiny.Maui.Scheduler;
+
+public class CalendarListDayGroup : List<SchedulerEvent>
+{
+    public CalendarListDayGroup(DateOnly date, IEnumerable<SchedulerEvent> events) : base(events)
+    {
+        Date = date;
+        DateDisplay = date.ToString("dddd, MMMM d, yyyy");
+        IsToday = date == DateOnly.FromDateTime(DateTime.Today);
+    }
+
+    public DateOnly Date { get; }
+    public string DateDisplay { get; }
+    public bool IsToday { get; }
+}

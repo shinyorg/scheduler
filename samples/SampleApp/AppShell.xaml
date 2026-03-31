@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<Shell
+    x:Class="SampleApp.AppShell"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:pages="clr-namespace:SampleApp.Pages"
+    Title="Scheduler Sample">
+
+    <TabBar>
+        <ShellContent
+            Title="Calendar"
+            ContentTemplate="{DataTemplate pages:CalendarPage}"
+            Route="CalendarPage" />
+
+        <ShellContent
+            Title="Agenda"
+            ContentTemplate="{DataTemplate pages:AgendaPage}"
+            Route="AgendaPage" />
+
+        <ShellContent
+            Title="Event List"
+            ContentTemplate="{DataTemplate pages:CalendarListPage}"
+            Route="CalendarListPage" />
+    </TabBar>
+
+</Shell>
