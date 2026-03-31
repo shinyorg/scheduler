@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using MauiDevFlow.Agent;
 using SampleApp.Pages;
 using SampleApp.Services;
 using SampleApp.ViewModels;
@@ -30,6 +31,7 @@ public static class MauiProgram
 
 #if DEBUG
         builder.Logging.AddDebug();
+        builder.AddMauiDevFlowAgent();
 #endif
 
         return builder.Build();

@@ -46,8 +46,6 @@ var builder = MauiApp.CreateBuilder();
 builder
     .UseMauiApp<App>()
     .UseShinyScheduler();
-
-builder.Services.AddSingleton<ISchedulerEventProvider, MyEventProvider>();
 ```
 
 ## Core Interfaces and Models
@@ -165,10 +163,7 @@ public class MyEventProvider : ISchedulerEventProvider
 }
 ```
 
-Register as singleton in DI:
-```csharp
-builder.Services.AddSingleton<ISchedulerEventProvider, MyEventProvider>();
-```
+Pass the provider to views via the `Provider` bindable property — it does not need to be registered in DI.
 
 ### 3. ViewModels
 

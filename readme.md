@@ -21,9 +21,9 @@ var builder = MauiApp.CreateBuilder();
 builder
     .UseMauiApp<App>()
     .UseShinyScheduler();
-
-builder.Services.AddSingleton<ISchedulerEventProvider, MyEventProvider>();
 ```
+
+The `ISchedulerEventProvider` is not registered in DI — you pass any implementation directly to the view via the `Provider` bindable property.
 
 ### 3. Implement ISchedulerEventProvider
 
