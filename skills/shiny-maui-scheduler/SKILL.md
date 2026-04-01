@@ -253,7 +253,7 @@ public partial class MyPage : ContentPage
 | CurrentDayColor | Color | DodgerBlue |
 | FirstDayOfWeek | DayOfWeek | Sunday |
 | AllowPan | bool | true |
-| AllowZoom | bool | true |
+| AllowZoom | bool | false |
 
 ### SchedulerAgendaView
 
@@ -276,7 +276,7 @@ public partial class MyPage : ContentPage
 | DefaultEventColor | Color | CornflowerBlue |
 | TimeSlotHeight | double | 60.0 |
 | AllowPan | bool | true |
-| AllowZoom | bool | true |
+| AllowZoom | bool | false |
 | ShowAdditionalTimezones | bool | false |
 | AdditionalTimezones | IList\<TimeZoneInfo\> | empty |
 
@@ -296,7 +296,7 @@ public partial class MyPage : ContentPage
 | DayHeaderBackgroundColor | Color | Transparent |
 | DayHeaderTextColor | Color | Black |
 | AllowPan | bool | true |
-| AllowZoom | bool | true |
+| AllowZoom | bool | false |
 
 ## Default Templates
 

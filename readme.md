@@ -108,7 +108,7 @@ A monthly calendar grid with swipe navigation and event dots/summaries per day c
 | CurrentDayColor | Color | DodgerBlue | Accent color for today |
 | FirstDayOfWeek | DayOfWeek | Sunday | First day of the week |
 | AllowPan | bool | true | Enable swipe navigation between months |
-| AllowZoom | bool | true | Enable pinch-to-zoom on calendar grid |
+| AllowZoom | bool | false | Enable pinch-to-zoom on calendar grid |
 
 **Features:**
 - Month navigation arrows and swipe left/right
@@ -156,7 +156,7 @@ A day/multi-day timeline with hourly time slots, event positioning with overlap 
 | DefaultEventColor | Color | CornflowerBlue | Default event background color |
 | TimeSlotHeight | double | 60 | Height in pixels per hour slot |
 | AllowPan | bool | true | Enable scrolling the timeline |
-| AllowZoom | bool | true | Enable pinch-to-zoom (adjusts TimeSlotHeight) |
+| AllowZoom | bool | false | Enable pinch-to-zoom (adjusts TimeSlotHeight) |
 | ShowAdditionalTimezones | bool | false | Toggle visibility of additional timezone columns |
 | AdditionalTimezones | IList\<TimeZoneInfo\> | empty | Additional timezones to display alongside local time |
 
@@ -210,7 +210,7 @@ A vertically scrolling event list grouped by day with infinite scroll in both di
 | DayHeaderBackgroundColor | Color | Transparent | Background color of day headers |
 | DayHeaderTextColor | Color | Black | Text color of day headers |
 | AllowPan | bool | true | Enable scroll gestures |
-| AllowZoom | bool | true | Enable pinch-to-zoom |
+| AllowZoom | bool | false | Enable pinch-to-zoom |
 
 **Features:**
 - Grouped by day with headers ("Monday, March 30, 2026")
